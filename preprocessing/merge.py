@@ -7,6 +7,7 @@ from myutils import make_logger, describe
 
 logger = make_logger('merge')
 
+
 def read_comorb(data_dir):
     logger.info('Reading co-morbities table')
 
@@ -137,15 +138,15 @@ if __name__ == "__main__":
     vitals = read_vitals(data_dir)
     comob = read_comorb(data_dir)
     comob_list = comob.columns.drop('PT_ID').values
-    
+
     logger.info('Merging')
-    merged = demo.merge(clinical,on='PT_ID', how='inner')\
-                 .merge(met, on=['PT_ID','LAB_DT'], how='outer')\
-                 .merge(vitals, on=['PT_ID','LAB_DT'], how='outer')\
+    merged = demo.merge(clinical, on='PT_ID', how='inner')\
+                 .merge(met, on=['PT_ID', 'LAB_DT'], how='outer')\
+                 .merge(vitals, on=['PT_ID', 'LAB_DT'], how='outer')\
                  .merge(comob, on='PT_ID')
     logger.info('Parsing co-comorbidities by date')
     merged[comob_list] = merged[comob_list]\
-                         .apply(lambda x: x<=merged.LAB_DT)
+        .apply(lambda x: x <= merged.LAB_DT)
 
     logger.info('Saving merged.pkl {}'.format(merged.shape))
     merged.to_csv('merged.csv', index=False)
