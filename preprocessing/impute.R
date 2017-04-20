@@ -1,4 +1,5 @@
 library(mice)
 merged <- read.csv('to_mice.csv', header=TRUE, sep=',')
-merged.imp <- mice(merged)
+miced <- mice(merged)
+merged.imp <- complete(miced)
 write.csv(merged.imp, 'miced.csv')        
