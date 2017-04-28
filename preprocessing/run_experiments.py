@@ -11,7 +11,7 @@ from itertools import product
 import argparse
 
 logger = make_logger('clustering')
-PATH = '/home/aeulloacerna/data/copd/preprocessing/'
+PATH = '/data/drive2/data/copd/'
 
 
 def make_argparser():
@@ -24,8 +24,6 @@ def make_argparser():
 
 def plot(dfIN, X2, folder_path='/tmp/'):
     df = dfIN.copy()
-    df['PT_SURVIVAL'] = df.PT_DEATH_DT.dt.year - df.LAB_DT
-    df['N_COMOB'] = df.select_dtypes(include=['bool']).sum(axis=1)
     sns.set(rc={'axes.facecolor': 'black',
                 'axes.grid': False,
                 'legend.fontsize': 14,
@@ -34,11 +32,15 @@ def plot(dfIN, X2, folder_path='/tmp/'):
 
     tf = pd.DataFrame(X2, columns=['t1', 't2'], index=df.index)
     # Continuous factors
-    factors = ['PT_SURVIVAL', 'PT_AGE', 'N_COMOB']
-    factors.extend(df.select_dtypes(include=['float64']
-                                    .columns.tolist()))
+    factors = ['PT_SURVIVAL', 'AGE', 'N_COMOB']
+    factors.extend(df.select_dtypes(include=['float64'])
+                   .columns.tolist())
+    df['PT_SURVIVAL'] = df.PT_DEATH_DT.dt.year - df.LAB_DT
+    df['N_COMOB'] = df.select_dtypes(include=['bool']).sum(axis=1)
+
     df = pd.concat((df, tf), axis=1)
     for factor in factors:
+        logger.info('Plotting {}'.format(factor))
         df[factor] = pd.qcut(df[factor], 4)
         plt.figure(figsize=(10, 10))
         sns.lmplot(data=df, x='t1', y='t2',
@@ -49,9 +51,10 @@ def plot(dfIN, X2, folder_path='/tmp/'):
                    scatter_kws={'alpha': 0.8, 's': 20})
         plt.savefig('{}/{}.png'
                     .format(folder_path, factor.replace("/", "")))
+        plt.close('all')
 
     # Categorical factors
-    cols = ['PT_SEX', 'PT_HX_SMOKE', 'STUDY_NM', 'PT_STATUS']
+    cols = ['PT_SEX', 'PT_HX_SMOKE', 'PT_STATUS']
     cols.extend(df.select_dtypes(include=['bool']).columns.tolist())
     for factor in cols:
         plt.figure(figsize=(10, 10))
@@ -69,6 +72,7 @@ def plot(dfIN, X2, folder_path='/tmp/'):
                        "RdBu", n_colors=df[factor].nunique()),
                    scatter_kws={'alpha': 0.8, 's': 20})
         plt.savefig('{}/{}.png'.format(folder_path, factor))
+        plt.close('all')
 
 
 def run_pca(X, **kwargs):
@@ -112,7 +116,7 @@ def run_ae(X, **kwargs):
         logger.info('Done. AE Loss: {}'.format(loss))
 
     # AE
-    ae_args = {'layers_dim': [200, 50], 'inits': ['normal', 'normal'],
+    ae_args = {'layers_dim': [100, 100, 5], 'inits': ['normal', 'normal'],
                'activations': ['relu', 'sigmoid'], 'l2': 0,
                'optimizer': 'adagrad'}
     ae_args.update(kwargs)
@@ -176,7 +180,7 @@ def run_experiment(X, df, group,
     X2 = run_tsne(Xp, **tsne_params)
 
     logger.info('Saving {}'.format(X2_path))
-    np.save(temp, X2)
+    np.save(X2_path, X2)
 
     plot(df[group], X2, folder_path=plot_path)
 
@@ -190,10 +194,15 @@ if __name__ == "__main__":
     Xs = {'measurements': X1,
           'comorbidities': X2,
           'meas_comob': np.concatenate((X1, X2), axis=1)}
-    groups = {'deceased': (df['PT_STATUS'] == 'DECEASED').values,
-              'diabetes': df['DIABETES_INDEX_DT'].values,
-              'cough': df['CHRONICCOUGH_INDEX_DT'].values}
-    frs = ['pca', 'ae']
+    groups = {
+        'deceased': (df['PT_STATUS'] == 'DECEASED').values,
+        'diabetes': df['DIABETES_INDEX_DT'].values,
+        'cough': df['CHRONICCOUGH_INDEX_DT'].values,
+        'depression': df['DEPRESSION_INDEX_DT'].values,
+        'reflux': df['REFLUX_INDEX_DT'].values}
+    frs = [
+        #'pca',
+        'ae']
 
     for (X, group, fr) in product(*[Xs.keys(), groups.keys(), frs]):
         logger.info('EXPERIMENT on {}, {}, with {}'.format(X, group, fr))
