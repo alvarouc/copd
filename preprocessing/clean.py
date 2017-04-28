@@ -20,6 +20,7 @@ if __name__ == "__main__":
 
     logger.info('Older than 18 {}'.format(df.shape))
 
+    df['BMI'][df['BMI'] > 184] = np.nan
     temp = df.select_dtypes(include=['float64']).drop('PT_HX_SMOKE', axis=1)
     temp[temp > (temp.mean() + 3 * temp.std())] = np.nan
     temp[temp < 0] = np.nan
