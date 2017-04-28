@@ -1,6 +1,7 @@
 import pandas as pd
 import multiprocessing as mp
 from myutils import make_logger
+from fancyimpute import MICE
 logger = make_logger('impute')
 
 
@@ -37,3 +38,8 @@ if __name__ == "__main__":
 
     toim = df.select_dtypes(include=['float64', 'bool']).columns
     df[toim].to_csv('to_mice.csv', index=False)
+    solver = MICE(min_value=0)
+    X = solver.complete(df[toim].values.astype('float64'))
+    df[toim] = X
+
+    df.to_pickle('miced.pkl')
